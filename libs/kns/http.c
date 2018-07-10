@@ -94,11 +94,12 @@ static rc_t _String_Set ( String * self, String * out ) {
     if ( self -> size == 0 )
         CONST_STRING ( out, "" );
     else {
-        out -> addr = string_dup_measure ( self -> addr, & out -> size );
+        out -> addr = string_dup ( self -> addr, self -> size );
         if ( out -> addr == NULL )
             return RC( rcNS, rcUrl, rcPacking, rcMemory, rcExhausted );
 
-        out -> len = out -> size;
+        out -> len  = self -> len;
+        out -> size = self -> size;
     }
 
     return 0;
@@ -167,8 +168,24 @@ rc_t ParseUrl ( URLBlock * self, const char * url, size_t url_size )
 
         if ( rc == 0 )
             rc = VPathGetHost ( path, & str );
-        if ( rc == 0 )
-            rc = _String_Set ( & str, & self -> host );
+        if ( rc == 0 && str . size > 0 ) {
+            size_t i = 0;
+            assert ( str . addr );
+            for ( i = 0; url_size - i >= str . size; ++ i ) {
+                if ( url [ i ] != str .addr [ 0 ] )
+                    continue;
+                if ( string_cmp ( str . addr, str . size,
+                                    url + i, str . size, str . size ) == 0 )
+                {
+                    self -> host . addr = url + i;
+                    self -> host . size = str . size;
+                    self -> host . len  = str . len;
+                    break;
+                }
+            }
+            if ( self -> host . size == 0 )
+                rc = RC ( rcNS, rcUrl, rcParsing, rcName, rcNotFound );
+        }
 
         if ( rc == 0 )
             rc = VPathGetPath ( path, & str );
