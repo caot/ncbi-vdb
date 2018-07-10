@@ -128,18 +128,19 @@ typedef enum
 typedef struct URLBlock URLBlock;
 struct URLBlock
 {
-    String scheme;
-    String host;
-    String path; /* Path includes any parameter portion */
-    String query;
-    String fragment;
+    String scheme;                     /* used in KClientHttpRequestFormatMsg */
+    String host;                       /* used in KClientHttpRequestFormatMsg */
+    String path; /* Path includes any parameter portion, ...KClientHttpReq... */
+    String query;                      /* used in KClientHttpRequestFormatMsg */
 
-    uint32_t port;
+    uint32_t port;      /* initialized in ParseUrl, used right after ParseUrl */
 
-    SchemeType scheme_type;
-    bool tls;
+    bool tls; /* initialized in ParseUrl, used right after ParseUrl
+               = true just when scheme == https ( _scheme_type == st_HTTPS ) */
 
-    bool port_dflt;
+/*  String fragment;                      not used anywhere */
+/*  SchemeType scheme_type;               not used anywhere */
+/*  bool port_dflt;                       not used anywhere */
 };
 extern void URLBlockInit ( URLBlock *self );
 extern rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size );

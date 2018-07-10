@@ -80,14 +80,10 @@ void URLBlockInit ( URLBlock *self )
     CONST_STRING ( & self -> host, "" );
     CONST_STRING ( & self -> path, "/" );
     CONST_STRING ( & self -> query, "" );
-    CONST_STRING ( & self -> fragment, "" );
 
     self -> port = 0; /* 0 = DEFAULT 80 for http, 443 for https */
 
-    self -> scheme_type = st_NONE;
     self -> tls = false;
-
-    self -> port_dflt = true;
 }
 
 /* ParseUrl
@@ -117,6 +113,11 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
 
     bool have_host, have_scheme;
 
+    SchemeType _scheme_type = st_NONE;
+    bool _port_dflt = true;
+    String _fragment;
+    CONST_STRING ( & _fragment, "" );
+
     URLBlockInit ( b );
 
     /* scheme default to false because url may be a path */
@@ -138,7 +139,7 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
 
             /* here we assume the scheme will be http */
             b -> port = 80;
-            b -> scheme_type = st_HTTP;
+            _scheme_type = st_HTTP;
             if ( ! StringCaseEqual ( & b -> scheme, & http ) )
             {
                 String https;
@@ -146,7 +147,7 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
 
                 /* check for https */
                 b -> port = 443;
-                b -> scheme_type = st_HTTPS;
+                _scheme_type = st_HTTPS;
                 b -> tls = true;
                 if ( ! StringCaseEqual ( & b -> scheme, & https ) )
                 {
@@ -155,12 +156,12 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
                 
                     /* it is not http, check for s3 */
                     b -> port = 80;
-                    b -> scheme_type = st_S3;
+                    _scheme_type = st_S3;
                     b -> tls = false;
                     if ( ! StringCaseEqual ( & b -> scheme, & s3 ) )
                     {
                         b -> port = 0;
-                        b -> scheme_type = st_NONE;
+                        _scheme_type = st_NONE;
                         rc = RC ( rcNS, rcUrl, rcEvaluating, rcName, rcIncorrect );
                         PLOGERR ( klogErr ,( klogErr, rc, "Scheme is '$(scheme)'", "scheme=%S", & b -> scheme ) );
                         return rc;
@@ -182,7 +183,7 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
         const char *frag = sep + 1;
 
         /* assign fragment to the url_block */
-        StringInit ( & b -> fragment, frag, end - frag, ( uint32_t ) ( end - frag ) );
+        StringInit ( & _fragment, frag, end - frag, ( uint32_t ) ( end - frag ) );
 
         /* remove fragment from URL */
         end = sep;
@@ -301,7 +302,7 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
                 return rc;
             }
 
-            b -> port_dflt = false;
+            _port_dflt = false;
 
             /* assign host to url_block */
             StringInit ( & b -> host, buf, sep - buf, ( uint32_t ) ( sep - buf ) );
