@@ -3177,7 +3177,10 @@ LIB_EXPORT rc_t CC VPathGetQuery ( const VPath * self, String * str )
         rc = VPathGetTestSelf ( self );
         if ( rc == 0 )
         {
-            StringSubstr ( & self -> query, str, 1, 0 );
+            if ( self -> query . size > 0)
+                StringSubstr ( & self -> query, str, 1, 0 );
+            else
+                memset ( str, 0, sizeof * str );
             return 0;
         }
 
