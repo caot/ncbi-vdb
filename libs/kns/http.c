@@ -64,6 +64,8 @@
 
 #include "http-priv.h"
 
+#include "../vfs/path-priv.h" /* VPathMakeFmt */
+
 /*--------------------------------------------------------------------------
  * URLBlock
  *  RFC 3986
@@ -84,6 +86,22 @@ void URLBlockInit ( URLBlock *self )
     self -> port = 0; /* 0 = DEFAULT 80 for http, 443 for https */
 
     self -> tls = false;
+}
+
+static rc_t _String_Set ( String * self, String * out ) {
+    assert ( self && out );
+
+    if ( self -> size == 0 )
+        CONST_STRING ( out, "" );
+    else {
+        out -> addr = string_dup_measure ( self -> addr, & out -> size );
+        if ( out -> addr == NULL )
+            return RC( rcNS, rcUrl, rcPacking, rcMemory, rcExhausted );
+
+        out -> len = out -> size;
+    }
+
+    return 0;
 }
 
 typedef enum
@@ -112,8 +130,77 @@ typedef enum
  *    <scheme>:/<path>...    # scheme followed by anything other than '//'
  *    <path>...              # no leading '/'
  */
-rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size ) 
+rc_t ParseUrl ( URLBlock * self, const char * url, size_t url_size )
 {
+    VPath * path = NULL;
+    rc_t rc = VPathMakeFmt ( & path, "%.*s", ( uint32_t ) url_size, url );
+    if ( rc != 0 )
+        return rc;
+    else {
+        SchemeType scheme_type = st_NONE;
+
+        String str;
+        rc = VPathGetScheme ( path, & str );
+        if ( rc == 0 ) {
+            String http;
+            CONST_STRING ( & http, "http" );
+
+            rc = _String_Set ( & str, & self -> scheme );
+
+            if ( StringCaseEqual ( & str, & http ) )
+                scheme_type = st_HTTP;
+            else {
+                String https;
+                CONST_STRING ( & https, "https" );
+                if ( StringCaseEqual ( & str, & https ) ) {
+                    scheme_type = st_HTTPS;
+                    self -> tls = true;
+                }
+                else {
+                    String s3;
+                    CONST_STRING ( & s3, "s3" );
+                    if ( StringCaseEqual ( & str, & s3 ) )
+                        scheme_type = st_S3;
+                }
+            }
+        }
+
+        if ( rc == 0 )
+            rc = VPathGetHost ( path, & str );
+        if ( rc == 0 )
+            rc = _String_Set ( & str, & self -> host );
+
+        if ( rc == 0 )
+            rc = VPathGetPath ( path, & str );
+        if ( rc == 0 )
+            rc = _String_Set ( & str, & self -> path );
+
+        if ( rc == 0 )
+            rc = VPathGetQuery ( path, & str );
+        if ( rc == 0 )
+            rc = _String_Set ( & str, & self -> query );
+
+        if ( rc == 0 ) {
+            self -> port = VPathGetPortNum ( path );
+            if ( self -> port == 0 )
+                switch ( scheme_type ) {
+                    case st_HTTP :
+                    case st_S3   : self -> port =  80; break;
+                    case st_HTTPS: self -> port = 443; break;
+                    default      :                     break;
+                }
+        }
+
+        {
+            rc_t r = VPathRelease ( path );
+            if ( rc == 0 && r != 0 )
+                rc = r;
+        }
+    }
+
+    return rc;
+
+#if 0
     rc_t rc;
     char * sep;
     const char * buf = url;
@@ -318,6 +405,7 @@ rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size )
     }
     
     return 0;
+#endif
 }
 
 /*--------------------------------------------------------------------------
