@@ -86,6 +86,14 @@ void URLBlockInit ( URLBlock *self )
     self -> tls = false;
 }
 
+typedef enum
+{
+    st_NONE,
+    st_HTTP,
+    st_HTTPS,
+    st_S3
+} SchemeType;
+
 /* ParseUrl
  *  accept standard, full http URL:
  *    <scheme>://<host>[:<port>]/<path>[?<query>][#<fragment>]

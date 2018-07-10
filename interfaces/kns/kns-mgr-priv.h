@@ -117,14 +117,6 @@ bool KNSProxiesGet ( struct KNSProxies * self, const String ** http_proxy,
  * URLBlock
  *  RFC 3986
  */
-typedef enum
-{
-    st_NONE,
-    st_HTTP,
-    st_HTTPS,
-    st_S3
-} SchemeType;
-
 typedef struct URLBlock URLBlock;
 struct URLBlock
 {
