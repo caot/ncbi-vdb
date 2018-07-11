@@ -133,6 +133,7 @@ struct URLBlock
 
 extern rc_t URLBlockInit ( URLBlock * self, const char * url, size_t url_size );
 void URLBlockFini ( URLBlock * self );
+rc_t URLBlockCopy ( const URLBlock * self, URLBlock * copy );
 
 #ifdef __cplusplus
 }

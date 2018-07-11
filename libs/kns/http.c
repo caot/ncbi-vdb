@@ -75,7 +75,7 @@
 
 static void _String_Fini ( String * self ) {
     assert ( self );
-    free ( self -> addr );
+    free ( ( void * ) self -> addr );
     memset ( self, 0, sizeof * self );
 }
 
@@ -93,11 +93,11 @@ void URLBlockFini ( URLBlock *self )
     memset ( self, 0, sizeof * self );
 }
 
-static rc_t _String_Set ( String * self, String * out ) {
+static rc_t _String_Set ( const String * self, String * out ) {
     assert ( self && out );
 
     if ( self -> size == 0 )
-        CONST_STRING ( out, "" );
+        memset ( out, 0, sizeof * out );
     else {
         out -> addr = string_dup ( self -> addr, self -> size );
         if ( out -> addr == NULL )
@@ -108,6 +108,33 @@ static rc_t _String_Set ( String * self, String * out ) {
     }
 
     return 0;
+}
+
+rc_t URLBlockCopy ( const URLBlock * self, URLBlock * copy )
+{
+    rc_t rc = 0;
+
+    assert ( self && copy );
+
+    memset ( copy, 0, sizeof * copy );
+
+    if ( rc == 0 )
+        rc = _String_Set ( & self -> scheme, & copy -> scheme );
+    if ( rc == 0 )
+        rc = _String_Set ( & self -> path  , & copy -> path );
+    if ( rc == 0 )
+        rc = _String_Set ( & self -> query , & copy -> query );
+
+    /* keep the original pointer because of its use in KSubBuffer */
+    copy -> host = self -> host;
+
+    copy -> port = self -> port;
+    copy -> tls  = self -> tls;
+
+    if ( rc != 0 )
+        URLBlockFini ( copy );
+
+    return rc;
 }
 
 typedef enum
@@ -186,6 +213,7 @@ rc_t URLBlockInit ( URLBlock * self, const char * url, size_t url_size )
                 if ( string_cmp ( str . addr, str . size,
                                     url + i, str . size, str . size ) == 0 )
                 {
+                /* keep the original pointer because of its use in KSubBuffer */
                     self -> host . addr = url + i;
                     self -> host . size = str . size;
                     self -> host . len  = str . len;

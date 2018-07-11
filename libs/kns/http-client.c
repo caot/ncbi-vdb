@@ -2644,7 +2644,7 @@ rc_t KClientHttpRequestInit ( KClientHttpRequest * req,
     if ( rc == 0 )
     {
         /* assign url_block */
-        req -> url_block = * b;
+        rc = URLBlockCopy ( b, & req -> url_block );
     }
     return rc;
 }
