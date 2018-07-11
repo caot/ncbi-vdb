@@ -134,11 +134,11 @@ rc_t ParseUrlTest ( void )
         String url;
         StringInitCString ( & url, test_urls [ i ] );
         
-        rc  = ParseUrl ( & b, url . addr, url . size );
+        rc  = URLBlockInit ( & b, url . addr, url . size );
         if ( rc == 0 )
         {
             /* same as above */
-            OUTMSG ( ( "%s - ParseUrl succeeded -- %d: %s\n"
+            OUTMSG ( ( "%s - URLBlockInit succeeded -- %d: %s\n"
                        "scheme  : '%S'\n"
                        "host    : '%S'\n"
                        "path    : '%S'\n"
@@ -147,11 +147,12 @@ rc_t ParseUrlTest ( void )
                        "port    : '%u'\n\n"
                        , __func__, i, test_urls [ i ], & b . scheme, & b . host
                        , & b . path, & b . query, & b . fragment, b . port ) );
+            URLBlockFini ( &b );
         }
         else
         {
             /* same as above. analyze your code more */
-            OUTMSG (( "%s: ParseUrl failed on iteration: '%d' url: %s\n"
+            OUTMSG (( "%s: URLBlockInit failed on iteration: '%d' url: %s\n"
                       "with rc=%R\n\n", __func__, i, test_urls [ i ], rc ));
             return rc;
         }
@@ -165,11 +166,11 @@ rc_t ParseUrlTest ( void )
         String url;
         StringInitCString ( & url, fail_url [ i ] );
         
-        rc  = ParseUrl ( & b, url . addr, url . size );
+        rc  = URLBlockInit ( & b, url . addr, url . size );
         if ( rc != 0 )
         {
             /* same as above */
-            OUTMSG ( ( "%s - ParseUrl succeeded in catching error-- %d: %s\n"
+            OUTMSG ( ( "%s - URLBlockInit succeeded in catching error-- %d: %s\n"
                        "scheme  : '%S'\n"
                        "host    : '%S'\n"
                        "path    : '%S'\n"
@@ -178,17 +179,18 @@ rc_t ParseUrlTest ( void )
                        "port    : '%u'\n\n"
                        , __func__, i, fail_url [ i ], & b . scheme, & b . host
                        , & b . path, & b . query, & b . fragment, b . port ) );
+            URLBlockFini ( &b );
         }
         else
         {
             /* same as above. analyze your code more */
-            OUTMSG (( "%s: ParseUrl failed catching error on iteration: '%d' url: %s\n"
+            OUTMSG (( "%s: URLBlockInit failed catching error on iteration: '%d' url: %s\n"
                       "with rc=%R\n\n", __func__, i, fail_url [ i ], rc ));
             return rc;
         }
     }
     
-    return rc = 0;
+    return rc;
 }
 
 rc_t HttpTest ( const KFile *input )

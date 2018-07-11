@@ -125,17 +125,14 @@ struct URLBlock
     String path; /* Path includes any parameter portion, ...KClientHttpReq... */
     String query;                      /* used in KClientHttpRequestFormatMsg */
 
-    uint32_t port;      /* initialized in ParseUrl, used right after ParseUrl */
+    uint32_t port;      /* initialized in URLBlockInit, used right after */
 
-    bool tls; /* initialized in ParseUrl, used right after ParseUrl
+    bool tls; /* initialized in URLBlockInit, used right after URLBlockInit
                = true just when scheme == https ( _scheme_type == st_HTTPS ) */
-
-/*  String fragment;                      not used anywhere */
-/*  SchemeType scheme_type;               not used anywhere */
-/*  bool port_dflt;                       not used anywhere */
 };
-extern void URLBlockInit ( URLBlock *self );
-extern rc_t ParseUrl ( URLBlock * b, const char * url, size_t url_size );
+
+extern rc_t URLBlockInit ( URLBlock * self, const char * url, size_t url_size );
+void URLBlockFini ( URLBlock * self );
 
 #ifdef __cplusplus
 }

@@ -526,7 +526,7 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                         if ( rc == 0 )
                         {
                             URLBlock block;
-                            rc = ParseUrl ( &block, buf -> base, buf -> elem_count - 1 );
+                            rc = URLBlockInit ( &block, buf -> base, buf -> elem_count - 1 );
                             if ( rc == 0 ) 
                             {
                                 KClientHttp *http;
@@ -667,6 +667,8 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                     KClientHttpRelease ( http );
                                 }
                             }
+
+                            URLBlockFini ( &block );
                         }
 
                         KDataBufferWhack ( buf );

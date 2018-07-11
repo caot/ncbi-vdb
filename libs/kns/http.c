@@ -73,19 +73,24 @@
  * TBD - replace with VPath
  */
 
-/* Init
- *  Initialize to default values in case portions are missing
- */
-void URLBlockInit ( URLBlock *self )
+static void _String_Fini ( String * self ) {
+    assert ( self );
+    free ( self -> addr );
+    memset ( self, 0, sizeof * self );
+}
+
+void URLBlockFini ( URLBlock *self )
 {
-    CONST_STRING ( & self -> scheme, "http" );
-    CONST_STRING ( & self -> host, "" );
-    CONST_STRING ( & self -> path, "/" );
-    CONST_STRING ( & self -> query, "" );
+    assert ( self );
 
-    self -> port = 0; /* 0 = DEFAULT 80 for http, 443 for https */
+    /* don't free host - it was not allocated here */
 
-    self -> tls = false;
+    _String_Fini ( & self -> scheme );
+    _String_Fini ( & self -> path  );
+    _String_Fini ( & self -> path  );
+    _String_Fini ( & self -> query  );
+
+    memset ( self, 0, sizeof * self );
 }
 
 static rc_t _String_Set ( String * self, String * out ) {
@@ -113,7 +118,7 @@ typedef enum
     st_S3
 } SchemeType;
 
-/* ParseUrl
+/* Init
  *  accept standard, full http URL:
  *    <scheme>://<host>[:<port>]/<path>[?<query>][#<fragment>]
  *
@@ -131,7 +136,7 @@ typedef enum
  *    <scheme>:/<path>...    # scheme followed by anything other than '//'
  *    <path>...              # no leading '/'
  */
-rc_t ParseUrl ( URLBlock * self, const char * url, size_t url_size )
+rc_t URLBlockInit ( URLBlock * self, const char * url, size_t url_size )
 {
     VPath * path = NULL;
     rc_t rc = VPathMakeFmt ( & path, "%.*s", ( uint32_t ) url_size, url );
@@ -141,6 +146,10 @@ rc_t ParseUrl ( URLBlock * self, const char * url, size_t url_size )
         SchemeType scheme_type = st_NONE;
 
         String str;
+
+        assert ( self );
+        memset ( self, 0, sizeof * self );
+
         rc = VPathGetScheme ( path, & str );
         if ( rc == 0 ) {
             String http;
@@ -216,213 +225,6 @@ rc_t ParseUrl ( URLBlock * self, const char * url, size_t url_size )
     }
 
     return rc;
-
-#if 0
-    rc_t rc;
-    char * sep;
-    const char * buf = url;
-    const char * end = buf + url_size;
-
-    bool have_host, have_scheme;
-
-    SchemeType _scheme_type = st_NONE;
-    bool _port_dflt = true;
-    String _fragment;
-    CONST_STRING ( & _fragment, "" );
-
-    URLBlockInit ( b );
-
-    /* scheme default to false because url may be a path */
-    have_scheme = false;
-
-    /* check if url is empty
-       scheme cannot start with a forward slash - detecting an absolute path */
-    if ( buf < end && buf [ 0 ] != '/' )
-    {
-        /* here we identify the scheme by finding the ':' */
-        sep = string_chr ( url, end - buf, ':' );
-        if ( sep != NULL )
-        {
-            String http;
-            CONST_STRING ( & http, "http" );
-
-            /* assign scheme to the url_block */
-            StringInit ( & b -> scheme, buf, sep - buf, ( uint32_t ) ( sep - buf ) );
-
-            /* here we assume the scheme will be http */
-            b -> port = 80;
-            _scheme_type = st_HTTP;
-            if ( ! StringCaseEqual ( & b -> scheme, & http ) )
-            {
-                String https;
-                CONST_STRING ( & https, "https" );
-
-                /* check for https */
-                b -> port = 443;
-                _scheme_type = st_HTTPS;
-                b -> tls = true;
-                if ( ! StringCaseEqual ( & b -> scheme, & https ) )
-                {
-                    String s3;
-                    CONST_STRING ( & s3, "s3" );
-                
-                    /* it is not http, check for s3 */
-                    b -> port = 80;
-                    _scheme_type = st_S3;
-                    b -> tls = false;
-                    if ( ! StringCaseEqual ( & b -> scheme, & s3 ) )
-                    {
-                        b -> port = 0;
-                        _scheme_type = st_NONE;
-                        rc = RC ( rcNS, rcUrl, rcEvaluating, rcName, rcIncorrect );
-                        PLOGERR ( klogErr ,( klogErr, rc, "Scheme is '$(scheme)'", "scheme=%S", & b -> scheme ) );
-                        return rc;
-                    }
-                }
-            }
-
-            /* accept scheme - skip past */
-            buf = sep + 1;
-            have_scheme = true;
-        }
-    }
-    
-    /* discard fragment - not sending to server, but still record it */
-    sep = string_rchr ( buf, end - buf,  '#' );
-    if ( sep != NULL )
-    {
-        /* advance to first character in fragment */
-        const char *frag = sep + 1;
-
-        /* assign fragment to the url_block */
-        StringInit ( & _fragment, frag, end - frag, ( uint32_t ) ( end - frag ) );
-
-        /* remove fragment from URL */
-        end = sep;
-    }
-                         
-    /* detect host */
-    have_host = false;
-    
-    /* check for '//' in the first two elements 
-       will fail if no scheme was detected */
-    if ( string_match ( "//", 2, buf, end - buf, 2, NULL ) == 2 )
-    {
-        /* skip ahead to host spec */
-        buf += 2;
-
-        /* if we ran into the end of the string, we dont have a host */
-        if ( buf == end )
-        {
-            rc = RC ( rcNS, rcUrl, rcParsing, rcOffset, rcIncorrect );
-            PLOGERR ( klogErr ,( klogErr, rc, "expected hostspec in url '$(url)'", "url=%.*s", ( uint32_t ) url_size, url ) );
-            return rc;
-        }
-
-        have_host = true;
-    }
-
-    /* if there is a scheme but no host, error */
-    if ( have_scheme && ! have_host )
-    {
-        rc = RC ( rcNS, rcUrl, rcParsing, rcName, rcNotFound );
-        PLOGERR ( klogErr ,( klogErr, rc, "Host is '$(host)'", "host=%s", "NULL" ) );
-        return rc;
-    }
-        
-    /* find dividing line between host and path, which MUST start with '/' */
-    sep = string_chr ( buf, end - buf, '/' );
-
-    /* detect no path */
-    if ( sep == NULL )
-    {
-        /* no path and no host */
-        if ( ! have_host )
-        {
-            rc = RC ( rcNS, rcUrl, rcParsing, rcName, rcNotFound );
-            PLOGERR ( klogErr ,( klogErr, rc, "Path is '$(path)'", "path=%s", "/" ) );
-            return rc;
-        }
-        /* no path but have host 
-           default value for path is already '/' */
-        sep = ( char* ) end;
-    }
-
-    /* capture host ( could be empty - just given a file system path ) */
-    if ( have_host )
-    {
-        /* assign host to url_block */
-        StringInit ( & b -> host, buf, sep - buf, ( uint32_t ) ( sep - buf ) );
-
-        /* advance to path */
-        buf = sep;
-    }
-
-    /* detect relative path 
-       <hostname>/<path> - OK, handled above
-       /<path> - OK
-    */
-    if ( buf != sep )
-    {
-        rc = RC ( rcNS, rcPath, rcParsing, rcOffset, rcIncorrect );
-        PLOGERR ( klogErr ,( klogErr, rc, "Path is '$(path)'", "path=%s", "NULL" ) );
-        return rc;
-    }
-
-    /* if we dont have a host we must have a path
-       if we DO have a host and the path is not empty */
-    if ( ! have_host || buf != end )
-    {
-        /* check for query */
-        sep = string_chr ( buf, end - buf,  '?' );
-        if ( sep != NULL )
-        {
-            const char *query = sep + 1;
-            /* assign query to url_block */
-            StringInit ( & b -> query, query, end - query, ( uint32_t ) ( end - query ) ); 
-
-            /* advance end to sep */
-            end = sep;
-        }
-
-        /* assign path ( could also be empty ) */
-        StringInit ( & b -> path, buf, end - buf, ( uint32_t ) ( end - buf ) );
-    }
-
-    /* if we have a host, split on ':' to check for a port
-       OK if not found */
-    if ( have_host )
-    {
-        buf = b -> host . addr;
-        end = buf + b -> host . size;
-
-        /* check for port */
-        sep = string_chr ( buf, end - buf,  ':' );
-        if ( sep != NULL )
-        {
-            char *term;
-            const char * port = sep + 1;
-            /* assign port to url block converting to 32 bit int 
-             term should point to end */
-            b -> port = strtou32 ( port, & term, 10 );
-
-            /* error if 0 or term isnt at the end of the buffer */
-            if ( b -> port == 0 || ( const char* ) term != end )
-            {
-                rc = RC ( rcNS, rcUrl, rcParsing, rcNoObj, rcIncorrect );
-                PLOGERR ( klogErr ,( klogErr, rc, "Port is '$(port)'", "port=%u", b -> port ) );
-                return rc;
-            }
-
-            _port_dflt = false;
-
-            /* assign host to url_block */
-            StringInit ( & b -> host, buf, sep - buf, ( uint32_t ) ( sep - buf ) );
-        }
-    }
-    
-    return 0;
-#endif
 }
 
 /*--------------------------------------------------------------------------

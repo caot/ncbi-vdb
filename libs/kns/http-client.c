@@ -2733,9 +2733,10 @@ LIB_EXPORT rc_t CC KClientHttpVMakeRequest ( const KClientHttp *self,
             {
                 /* parse the URL */
                 URLBlock block;
-                rc = ParseUrl ( & block, buf . base, buf . elem_count - 1 );
+                rc = URLBlockInit ( & block, buf . base, buf . elem_count - 1 );
                 if ( rc == 0 )
                     rc = KClientHttpMakeRequestInt ( self, _req, & block, & buf );
+                URLBlockFini ( &block );
             }
 
             KDataBufferWhack ( & buf );
@@ -2822,7 +2823,7 @@ rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
             {
                 /* parse the URL */
                 URLBlock block;
-                rc = ParseUrl ( & block, buf . base, buf . elem_count - 1 );
+                rc = URLBlockInit ( & block, buf . base, buf . elem_count - 1 );
                 if ( rc == 0 )
                 {
                     KClientHttp * http;
@@ -2835,6 +2836,7 @@ rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
                         KClientHttpRelease ( http );
                     }
                 }
+                URLBlockFini ( &block );
             }
             KDataBufferWhack ( & buf );
         }
@@ -3382,7 +3384,7 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttp
         if ( rc == 0 )
         {
             /* parse the URI into local url_block */
-            rc = ParseUrl ( &b, uri . base, uri . elem_count - 1 );
+            rc = URLBlockInit ( &b, uri . base, uri . elem_count - 1 );
             if ( rc == 0 )
             {
                 KClientHttp *http = self -> http;
@@ -3403,6 +3405,7 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, KClientHttp
                         KClientHttpResultRelease ( rslt );
                 }
             }
+            URLBlockFini ( &b );
 
             KDataBufferWhack ( & uri );
         }
