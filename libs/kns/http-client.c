@@ -2618,6 +2618,7 @@ static
 rc_t KClientHttpRequestClear ( KClientHttpRequest *self )
 {
     KDataBufferWhack ( & self -> url_buffer );
+    URLBlockFini ( & self -> url_block );
 
     return 0;
 }
@@ -2630,6 +2631,8 @@ rc_t KClientHttpRequestWhack ( KClientHttpRequest * self )
     KClientHttpRelease ( self -> http );
     KDataBufferWhack ( & self -> body );
     
+    URLBlockFini ( & self -> url_block );
+
     BSTreeWhack  ( & self -> hdrs, KHttpHeaderWhack, NULL );
     KRefcountWhack ( & self -> refcount, "KClientHttpRequest" );
     free ( self );
