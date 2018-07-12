@@ -707,7 +707,7 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, K
 rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
     const KDataBuffer *hostname_buffer,  KStream *opt_conn,
     ver_t vers, int32_t readMillis, int32_t writeMillis,
-    const String *host, uint32_t port, bool reliable, bool tls )
+    bool reliable, const URLBlock * block )
 {
     rc_t rc;
 
@@ -716,6 +716,8 @@ rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
         rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcNull );
     else
     {
+        assert ( block );
+
         rc = KNSManagerAddRef ( self );
         if ( rc == 0 )
         {
@@ -731,21 +733,22 @@ rc_t KNSManagerMakeClientHttpInt ( const KNSManager *self, KClientHttp **_http,
             KDataBufferClear ( & http -> line_buffer );
 
             /* make sure address of bost is within hostname_buffer */
-            assert ( KDataBufferContainsString ( hostname_buffer, host ) );
+            assert ( KDataBufferContainsString ( hostname_buffer,
+                                                 & block -> host ) );
 
             /* SET TEXT TO POINT TO THE HOST NAME AND NUL TERMINATE IT FOR DEBUGGING
              Its safe to modify the const char array because we allocated the buffer*/ 
-            text = ( char* ) ( host -> addr );
-            save = text [ host -> size ];
-            text [ host -> size ] = 0;
+            text = ( char* ) ( block -> host . addr );
+            save = text [ block -> host . size ];
+            text [ block -> host . size ] = 0;
         
             /* initialize reference counter on object to 1 - text is now nul-terminated */
             KRefcountInit ( & http -> refcount, 1, "KClientHttp", "make", text );
 
-            text [ host -> size ] = save;
+            text [ block -> host . size ] = save;
 
             /* init the KClientHttp object */
-            rc = KClientHttpInit ( http, hostname_buffer, opt_conn, vers, host, port, tls );
+            rc = KClientHttpInit ( http, hostname_buffer, opt_conn, vers, & block -> host, block -> port, block -> tls );
             if ( rc == 0 )
             {
                 http -> reliable = reliable;
@@ -795,6 +798,8 @@ rc_t KNSManagerMakeTimedClientHttpInt ( const KNSManager *self,
             rc = KDataBufferMakeBytes ( & hostname_buffer, host -> size + 1 );
             if ( rc == 0 )
             {
+                URLBlock block;
+
                 String _host;
 
                 /* copy hostname with nul termination */
@@ -821,8 +826,11 @@ rc_t KNSManagerMakeTimedClientHttpInt ( const KNSManager *self,
                     port = dflt_port;
 
                 /* initialize http object - will create a new reference to hostname buffer */
+                URLBlockInitHost ( & block, & _host, port, tls );
                 rc = KNSManagerMakeClientHttpInt ( self, _http, & hostname_buffer,
-                    opt_conn, vers, readMillis, writeMillis, &_host, port, false, tls );
+                    opt_conn, vers, readMillis, writeMillis, false, & block );
+
+                /* DON'T CALL URLBlockFini after URLBlockInitHost !!! */
 
                 /* release our reference to buffer */
                 KDataBufferWhack ( & hostname_buffer );
@@ -2832,7 +2840,8 @@ rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
                     KClientHttp * http;
                     
                     rc = KNSManagerMakeClientHttpInt ( self, & http, & buf, conn, vers,
-                        self -> http_read_timeout, self -> http_write_timeout, & block . host, block . port, reliable, block . tls );
+                        self -> http_read_timeout, self -> http_write_timeout,
+                        reliable, & block );
                     if ( rc == 0 )
                     {
                         rc = KClientHttpMakeRequestInt ( http, req, & block, & buf );

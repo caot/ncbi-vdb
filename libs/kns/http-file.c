@@ -532,7 +532,9 @@ static rc_t KNSManagerVMakeHttpFileInt ( const KNSManager *self,
                                 KClientHttp *http;
                           
                                 rc = KNSManagerMakeClientHttpInt ( self, & http, buf, conn, vers,
-                                    self -> http_read_timeout, self -> http_write_timeout, &block . host, block . port, reliable, block . tls );
+                                    self -> http_read_timeout,
+                                    self -> http_write_timeout,
+                                    reliable, & block );
                                 if ( rc == 0 )
                                 {
                                     KClientHttpRequest *req;

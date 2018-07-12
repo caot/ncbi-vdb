@@ -255,6 +255,23 @@ rc_t URLBlockInit ( URLBlock * self, const char * url, size_t url_size )
     return rc;
 }
 
+void URLBlockInitHost ( URLBlock * self,
+                        const String * host, uint32_t port, bool tls )
+{
+    assert ( self && host );
+
+    memset ( self, 0, sizeof * self );
+
+    if ( tls )
+        CONST_STRING ( & self -> scheme,"https");
+    else
+        CONST_STRING ( & self -> scheme,"https");
+
+    self -> host = * host;
+    self -> port = port;
+    self -> tls  = tls;
+}
+
 /*--------------------------------------------------------------------------
  * KHttpHeader
  *  node structure to place http header lines into a BSTree

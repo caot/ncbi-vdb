@@ -132,6 +132,7 @@ struct URLBlock
 };
 
 extern rc_t URLBlockInit ( URLBlock * self, const char * url, size_t url_size );
+void URLBlockInitHost ( URLBlock * self, const String * host, uint32_t port, bool tls );
 void URLBlockFini ( URLBlock * self );
 rc_t URLBlockCopy ( const URLBlock * self, URLBlock * copy );
 
