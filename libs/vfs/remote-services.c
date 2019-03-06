@@ -3092,6 +3092,18 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
 
     if (rc == 0 && SVersionNeedCloudLocation(request->version))
         rc = SCgiRequestAddLocation( self, helper );
+
+    if (rc == 0) {
+        const char name [] = "internal";
+        const char v [] = "0";
+        rc = SKVMake ( & kv, name, v );
+        if ( rc == 0 ) {
+             rc = VectorAppend ( & self -> params, NULL, kv );
+             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
+                 ( "  %s=%s\n", name, v ) );
+        }
+    }
+
     return rc;
 }
 
