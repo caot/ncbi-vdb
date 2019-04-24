@@ -29,6 +29,9 @@
 #include <klib/rc.h>
 #include <kproc/timeout.h>
 #include <klib/status.h>
+
+#include "tls_error.h" /* TlsError */
+
 #include <os-native.h>
 #include <sysalloc.h>
 
@@ -50,6 +53,7 @@ LIB_EXPORT rc_t CC KFileDestroy_v1 ( KFile_v1 *self )
     switch ( self -> vt -> v1 . maj )
     {
     case 1:
+        TlsErrorRelease(self->error);
         return ( * self -> vt -> v1 . destroy ) ( self );
     }
 
@@ -1008,6 +1012,8 @@ LIB_EXPORT rc_t CC KFileInit ( KFile_v1 *self, const KFile_vt *vt,
     self -> read_enabled = ( uint8_t ) ( read_enabled != 0 );
     self -> write_enabled = ( uint8_t ) ( write_enabled != 0 );
 
+    self->error = NULL;
+
     return 0;
 }
 
@@ -1149,4 +1155,43 @@ LIB_EXPORT rc_t CC KFileMakeStdOut ( KFile_v1 **std_out )
 LIB_EXPORT rc_t CC KFileMakeStdErr ( KFile_v1 **std_err )
 {
     return KFileMakeStdErr_v1 ( std_err );
+}
+
+
+LIB_EXPORT rc_t CC KFileDelayErrReporting(const KFile_v1 *cself, bool delay) {
+    KFile_v1 *self = (KFile_v1*) cself;
+
+    if (self == NULL)
+        return RC(rcFS, rcFile, rcUpdating, rcSelf, rcNull);
+
+    if (self->error == NULL) {
+        rc_t rc = TlsErrorMake(&self->error);
+        if (rc != 0)
+            return rc;
+    }
+
+    return TlsErrorSetDelayReporting(self->error, delay);
+}
+
+LIB_EXPORT rc_t CC KFileGetTlsErr(const KFile *self, int * ret, rc_t * rd_rc) {
+    if (self == NULL)
+        return RC(rcFS, rcFile, rcAccessing, rcSelf, rcNull);
+
+    return TlsErrorGet(self->error, ret, rd_rc);
+}
+
+rc_t KFileCopyTlsErr(KFile_v1 * self, const TlsError * from) {
+    if (self == NULL)
+        return RC(rcFS, rcFile, rcUpdating, rcSelf, rcNull);
+
+    if (from == NULL)
+        return RC(rcFS, rcFile, rcUpdating, rcParam, rcNull);
+
+    if (self->error == NULL) {
+        rc_t rc = TlsErrorMake(&self->error);
+        if (rc != 0)
+            return rc;
+    }
+
+    return TlsErrorCopy(from, self->error);
 }

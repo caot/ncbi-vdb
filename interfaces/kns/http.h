@@ -392,7 +392,15 @@ KNS_EXTERN bool CC KClientHttpResultTestHeaderValue ( const KClientHttpResult *s
 KNS_EXTERN rc_t CC KClientHttpResultGetInputStream ( KClientHttpResult *self,
     struct KStream  ** s );
 
+/* DelayErrReporting
+ *  don't report [tls] errors until they are not fatal
+ */
+KNS_EXTERN rc_t CC KClientHttpResultDelayErrReporting(KClientHttpResult * self,
+    bool delay);
+
+
 KNS_EXTERN bool CC KFileIsKHttpFile ( const struct KFile * self );
+
 
     /* compatibility defines */
 #define KHttpResultAddRef KClientHttpResultAddRef

@@ -47,6 +47,7 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
+struct TlsError;
 typedef union KStream_vt KStream_vt;
 
 
@@ -60,6 +61,9 @@ struct KStream
     KRefcount refcount;
     uint8_t read_enabled;
     uint8_t write_enabled;
+
+    struct TlsError * error;
+
     uint8_t align [ 2 ];
 };
 

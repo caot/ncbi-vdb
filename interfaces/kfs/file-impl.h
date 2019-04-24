@@ -51,6 +51,7 @@ struct timeout_t;
 struct KSysFile_v1;
 struct KSysFile_v2;
 struct KDirectory_v1;
+struct TlsError;
 typedef union KFile_vt KFile_vt;
 extern KItfTok KFile_tok_v2;
 
@@ -69,6 +70,7 @@ struct KFile_v1
 {
     const KFile_vt *vt;
     struct KDirectory_v1 const *dir;
+    struct TlsError *error;
     KRefcount refcount;
     uint8_t read_enabled;
     uint8_t write_enabled;

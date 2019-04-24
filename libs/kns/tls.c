@@ -668,6 +668,15 @@ rc_t CC KTLSStreamWhack ( KTLSStream *self )
     return 0;
 }
 
+LIB_EXPORT rc_t CC KTLSStreamLogReadErr(int ret, rc_t rc) {
+    return PLOGERR(klogSys, (klogSys, rc
+        , "mbedtls_ssl_read returned $(ret) ( $(expl) )"
+        , "ret=%d,expl=%s"
+        , ret
+        , mbedtls_strerror2(ret)
+        ));
+}
+
 static
 rc_t CC KTLSStreamRead ( const KTLSStream * cself,
     void * buffer, size_t bsize, size_t * num_read )
@@ -691,6 +700,8 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         /* read through TLS library */
         ret = vdb_mbedtls_ssl_read( &self -> ssl, buffer, bsize );
 
+        KStreamSetTlsErr(&self->dad, ret, self->rd_rc);
+
         /* no error */
         if ( ret >= 0 )
         {
@@ -702,12 +713,8 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         if ( self -> rd_rc != 0 )
         {
             rc = self -> rd_rc;
-            PLOGERR ( klogSys, ( klogSys, rc
-                                 , "mbedtls_ssl_read returned $(ret) ( $(expl) )"
-                                 , "ret=%d,expl=%s"
-                                 , ret
-                                 , mbedtls_strerror2 ( ret )
-                          ) );
+            if (!KStreamGetDelayErrReporting(&self->dad))
+                KTLSStreamLogReadErr(ret, rc);
 
             ret = 0;
             self -> rd_rc = 0;

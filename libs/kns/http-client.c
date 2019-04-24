@@ -1574,6 +1574,9 @@ rc_t CC KClientHttpStreamTimedRead ( const KClientHttpStream *cself,
         rc =  KStreamTimedRead ( http -> sock, buffer, num_to_read, num_read, tm );
         if ( rc != 0 )
         {
+            if (http->sock != NULL) /* it can be clother in another thread */
+                KStreamCopyTlsErr(&self->dad, http->sock->error);
+
             /* handle dropped connection - may want to reestablish */
             KClientHttpClose ( http );
 
@@ -2613,6 +2616,18 @@ LIB_EXPORT rc_t CC KClientHttpResultGetInputStream ( KClientHttpResult *self, KS
     * s = NULL;
     
     return rc;
+}
+
+/* DelayErrReporting
+ *  don't report [tls] errors until they are not fatal
+ */
+LIB_EXPORT rc_t CC KClientHttpResultDelayErrReporting(KClientHttpResult * self,
+    bool delay)
+{
+    if (self == NULL)
+        return RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
+
+    return KStreamSetDelayErrReporting(self->http->sock, delay);
 }
 
 

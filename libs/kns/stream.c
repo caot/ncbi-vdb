@@ -37,6 +37,8 @@
 
 #include <assert.h>
 
+#include "../kfs/tls_error.h" /* TlsError */
+
 /*--------------------------------------------------------------------------
  * KStream
  *  a file
@@ -54,6 +56,8 @@ rc_t KStreamDestroy ( KStream *self )
     switch ( self -> vt -> v1 . maj )
     {
     case 1:
+        TlsErrorRelease(self->error);
+        self->error = NULL;
         return ( * self -> vt -> v1 . destroy ) ( self );
     }
 
@@ -779,4 +783,53 @@ LIB_EXPORT rc_t CC KStreamInit ( KStream *self, const KStream_vt *vt,
     self -> write_enabled = ( uint8_t ) ( write_enabled != 0 );
 
     return 0;
+}
+
+rc_t KStreamSetDelayErrReporting(KStream *self, bool delay) {
+    if (self == NULL)
+        return RC(rcNS, rcStream, rcUpdating, rcSelf, rcNull);
+
+    if (self->error == NULL) {
+        rc_t rc = TlsErrorMake(&self->error);
+        if (rc != 0)
+            return rc;
+    }
+
+    return TlsErrorSetDelayReporting(self->error, delay);
+}
+
+bool KStreamGetDelayErrReporting(const KStream *self) {
+    if (self == NULL)
+        return false;
+
+    return TlsErrorGetDelayReporting(self->error);
+}
+
+rc_t KStreamSetTlsErr(KStream * self, int ret, rc_t rd_rc) {
+    if (self == NULL)
+        return RC(rcNS, rcStream, rcUpdating, rcSelf, rcNull);
+
+    if (self->error == NULL) {
+        rc_t rc = TlsErrorMake(&self->error);
+        if (rc != 0)
+            return rc;
+    }
+
+    return TlsErrorSet(self->error, ret, rd_rc);
+}
+
+rc_t KStreamCopyTlsErr(struct KStream * self, TlsError * from) {
+    if (self == NULL)
+        return RC(rcNS, rcStream, rcUpdating, rcSelf, rcNull);
+
+    if (from == NULL)
+        return RC(rcNS, rcStream, rcUpdating, rcParam, rcNull);
+
+    if (self->error == NULL) {
+        rc_t rc = TlsErrorMake(&self->error);
+        if (rc != 0)
+            return rc;
+    }
+
+    return TlsErrorCopy(from, self->error);
 }

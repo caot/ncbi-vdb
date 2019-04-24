@@ -39,6 +39,7 @@ struct KMD5File;
 struct KFile *KMD5FileToKFile ( struct KMD5File *self );
 struct KFile const *KMD5FileToKFileConst ( struct KMD5File const *self );
 
+rc_t KFileCopyTlsErr(KFile * self, const TlsError * from);
 
 #ifdef __cplusplus
 }

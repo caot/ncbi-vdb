@@ -92,6 +92,12 @@ KFS_EXTERN rc_t CC KDirectoryPosixStringToSystemString (
 
 #endif
 
+
+KFS_EXTERN rc_t CC KFileDelayErrReporting(const struct KFile *self, bool delay);
+KFS_EXTERN rc_t CC KFileGetTlsErr(const struct KFile *self,
+    int * ret, rc_t * rd_rc);
+
+
 #ifdef __cplusplus
 }
 #endif

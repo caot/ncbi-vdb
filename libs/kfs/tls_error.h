@@ -1,4 +1,4 @@
-/*===========================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -20,43 +20,36 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
-*/
+* =========================================================================== */
 
-#ifndef _h_libs_kns_stream_priv_
-#define _h_libs_kns_stream_priv_
+#ifndef _h_libs_kfs_tls_error_
+#define _h_libs_kfs_tls_error_
+
+#ifndef _h_kfc_defs_
+#include <kfc/defs.h> /* rc_t */
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* VDB.v2 is end of life, and introducing new object types is
-   dangerous. For our purposes, just call a stream a file */
-#ifndef rcStream
-#define rcStream rcFile
-#endif
 
-#ifndef rcSocket
-#define rcSocket rcFile
-#endif
+typedef struct TlsError TlsError;
 
-#ifndef rcUrl
-#define rcUrl rcPath
-#endif
+rc_t TlsErrorMake(TlsError ** self);
+rc_t TlsErrorRelease(TlsError * self);
 
-struct TlsError;
+rc_t TlsErrorSetDelayReporting(TlsError * self, bool delay);
+bool TlsErrorGetDelayReporting(TlsError * self);
 
-/* SetDelayErrReporting
-*  don't report [tls] errors until they are not fatal */
-rc_t  KStreamSetDelayErrReporting(struct KStream * self, bool delay);
-bool KStreamGetDelayErrReporting(const struct KStream *self);
-rc_t KStreamSetTlsErr(struct KStream * self, int ret, rc_t rd_rc);
-rc_t KStreamCopyTlsErr(struct KStream * self, struct TlsError * from);
+rc_t TlsErrorSet(TlsError * self, int ret, rc_t rd_rc);
+rc_t TlsErrorGet(TlsError * self, int * ret, rc_t * rd_rc);
+
+rc_t TlsErrorCopy(const TlsError * from, TlsError * to);
 
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _h_libs_kns_stream_priv_ */
+#endif /* _h_libs_kfs_tls_error_ */

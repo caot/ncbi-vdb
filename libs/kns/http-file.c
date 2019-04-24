@@ -30,6 +30,8 @@ typedef struct KHttpFile KHttpFile;
 #include <kfs/impl.h>
 
 #include "http-priv.h"
+#include "../kfs/tls_error.h" /* TlsErrorGetDelayReporting */
+#include "../kfs/kfs-priv.h" /* KFileCopyTlsErr */
 #include "mgr-priv.h"
 #include "stream-priv.h"
 
@@ -302,6 +304,9 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
                                     KStream *response;
                                 
                                     rc = KClientHttpResultGetInputStream ( rslt, &response );
+                                    KClientHttpResultDelayErrReporting(rslt,
+                                        TlsErrorGetDelayReporting(
+                                            self->dad.error));
                                     if ( rc == 0 )
                                     {
                                         size_t skip = 0;
@@ -309,6 +314,9 @@ otherwise we are going to hit "Apache return HTTP headers twice" bug */
                                         rc = KStreamTimedReadExactly( response, bPtr, result_size, tm );
                                         if ( rc != 0 )
                                         {
+                                            KFileCopyTlsErr(&self->dad,
+                                                response->error);
+
                                             KStreamRelease ( response );
                                             KClientHttpResultRelease ( rslt );
                                             KClientHttpRequestRelease ( req );

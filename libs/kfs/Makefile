@@ -103,6 +103,7 @@ KFS_CMN = \
 	sra \
 	tar \
 	teefile \
+	tls_error \
 	buffile \
 	buffile-read \
 	buffile-write \
