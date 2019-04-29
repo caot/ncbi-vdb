@@ -24,8 +24,8 @@
 *
 */
 
-#ifndef _h_kfs_priv_
-#define _h_kfs_priv_
+#ifndef _h_libs_kfs_priv_
+#define _h_libs_kfs_priv_
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,4 +45,4 @@ rc_t KFileCopyTlsErr(KFile * self, const TlsError * from);
 }
 #endif
 
-#endif /* _h_kfs_priv_ */
+#endif /* _h_libs_kfs_priv_ */
