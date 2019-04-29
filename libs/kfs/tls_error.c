@@ -22,6 +22,7 @@
 *
 * =========================================================================== */
 
+#include <ext/mbedtls/net_sockets.h> /* MBEDTLS_ERR_NET_RECV_FAILED */
 #include <klib/rc.h> /* RC */
 #include "tls_error.h" /* TlsError */
 
@@ -29,6 +30,7 @@ struct TlsError {
     bool delayErrReporting;
     int ret; /* return code of mbedtl */
     int rd_rc; /* read error returned from ciphertext stream */
+    bool handshake; /* error from handhake of read */
 };
 
 rc_t TlsErrorRelease(TlsError * self) {
@@ -62,24 +64,35 @@ rc_t TlsErrorSetDelayReporting(TlsError *self, bool delay) {
 }
 
 bool TlsErrorGetDelayReporting(TlsError * self) {
-    if (self != NULL)
+    if (self != NULL) {
+        if (self->handshake && self->ret != 0
+            && self->ret != MBEDTLS_ERR_NET_RECV_FAILED)
+        {
+            return false;
+        }
         return self->delayErrReporting;
+    }
 
     return false;
 }
 
-rc_t TlsErrorSet(TlsError * self, int ret, rc_t rd_rc) {
+rc_t TlsErrorSet(TlsError * self, int ret, rc_t rd_rc, bool handshake) {
     if (self != NULL) {
         self->ret = ret;
         self->rd_rc = rd_rc;
+        self->handshake = handshake;
+        if (ret != 0 && handshake) {
+            int i = 0;
+        }
     }
 
     return 0;
 }
 
-rc_t TlsErrorGet(TlsError * self, int * ret, rc_t * rd_rc) {
+rc_t TlsErrorGet(TlsError * self, int * ret, rc_t * rd_rc, bool * handshake) {
     int iDummy = 0;
     rc_t rDummy = 0;
+    bool bDummy = false;
 
     if (self == NULL)
         return RC(rcFS, rcStorage, rcAccessing, rcSelf, rcNull);
@@ -88,9 +101,12 @@ rc_t TlsErrorGet(TlsError * self, int * ret, rc_t * rd_rc) {
         ret = &iDummy;
     if (rd_rc == NULL)
         rd_rc = &rDummy;
+    if (handshake == NULL)
+        handshake = &bDummy;
 
     *ret = self->ret;
     *rd_rc = self->rd_rc;
+    *handshake = self->handshake;
 
     return 0;
 }
@@ -99,6 +115,10 @@ rc_t TlsErrorCopy(const TlsError * from, TlsError * to) {
     if (from != NULL && to != NULL) {
         to->ret = from->ret;
         to->rd_rc = from->rd_rc;
+        to->handshake = from->handshake;
+        if (to->ret != 0 && to->handshake) {
+            int i = 0;
+        }
     }
 
     return 0;

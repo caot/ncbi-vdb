@@ -135,6 +135,31 @@ struct KSocket
     } type_data;
 };
 
+rc_t KSocketSetTlsHandshakeErr(const KSocket * self, int ret, rc_t rd_rc) {
+    if (self != NULL)
+        return KStreamSetTlsHandshakeErr(self->dad, ret, rd_rc);
+    return 0;
+}
+
+const struct TlsError * KSocketGetTlsErr(const KSocket * self) {
+    if (self == NULL)
+        return NULL;
+    return self->dad.error;
+}
+
+bool KSocketGetDelayErrReporting(const KSocket * self) {
+    if (self == NULL)
+        return false;
+    return KStreamGetDelayErrReporting(&self->dad);
+}
+
+rc_t KSocketSetDelayErrReporting(KSocket * self, bool delay) {
+    if (self != NULL)
+        return KStreamSetDelayErrReporting(&self->dad, delay);
+    return 0;
+}
+
+
 static
 rc_t CC KSocketHandleShutdownCallWin ()
 {

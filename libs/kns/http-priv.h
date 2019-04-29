@@ -113,6 +113,9 @@ rc_t KNSManagerMakeClientHttpInt ( struct KNSManager const *self, struct KClient
     ver_t vers, int32_t readMillis, int32_t writeMillis,
     const String *host, uint32_t port, bool reliable, bool tls );
 
+const struct TlsError * KClientHttpGetTlsError(const struct KClientHttp * self);
+rc_t KClientHttpSetDelayReporting(struct KClientHttp * self, bool delay);
+
 /* test */
 /*
 void KClientHttpForceSocketClose(const struct KClientHttp *self);

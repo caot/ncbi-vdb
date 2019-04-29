@@ -122,6 +122,13 @@ rc_t KNSProxiesGetHttpProxyPath ( const struct KNSProxies* self,
                                   const String ** proxy );
 
 
+struct KSocket;
+rc_t KSocketSetTlsHandshakeErr(
+    const struct KSocket * self, int ret, rc_t rd_rc);
+const struct TlsError * KSocketGetTlsErr(const struct KSocket * self);
+rc_t KSocketSetDelayErrReporting(struct KSocket * self, bool delay);
+bool KSocketGetDelayErrReporting(const struct KSocket * self);
+
 /************************************ test ************************************/
 struct KStream;
 void KStreamForceSocketClose ( struct KStream const * self );

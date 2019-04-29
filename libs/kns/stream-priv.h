@@ -51,7 +51,8 @@ struct TlsError;
 *  don't report [tls] errors until they are not fatal */
 rc_t  KStreamSetDelayErrReporting(struct KStream * self, bool delay);
 bool KStreamGetDelayErrReporting(const struct KStream *self);
-rc_t KStreamSetTlsErr(struct KStream * self, int ret, rc_t rd_rc);
+rc_t KStreamSetTlsHandshakeErr(struct KStream * self, int ret, rc_t rd_rc);
+rc_t KStreamSetTlsReadErr(struct KStream * self, int ret, rc_t rd_rc);
 rc_t KStreamCopyTlsErr(struct KStream * self, struct TlsError * from);
 
 

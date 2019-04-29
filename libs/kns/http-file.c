@@ -46,6 +46,7 @@ typedef struct KHttpFile KHttpFile;
 #include <kns/stream.h>
 
 #include <kfs/file.h>
+#include <kfs/kfs-priv.h> /* KFileGetDelayErrReporting */
 #include <kfs/directory.h>
 
 #ifdef ERR
@@ -419,6 +420,8 @@ rc_t CC KHttpFileTimedRead ( const KHttpFile *self,
             if ( rc != 0 ) 
             {   
                 rc_t rc2=KClientHttpReopen ( self -> http );
+                TlsErrorCopy(KClientHttpGetTlsError(self->http),
+                    self->dad.error);
                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ), ( "KHttpFileTimedRead: KHttpFileTimedReadLocked failed, reopening\n" ) );
                 if ( rc2 == 0 )
                 {
@@ -462,8 +465,12 @@ rc_t CC KHttpFileRead ( const KHttpFile *self, uint64_t pos,
     rc_t rc = 0;
     struct timeout_t tm;
     TimeoutInit ( & tm, self -> kns -> http_read_timeout );
+    KClientHttpSetDelayReporting(self->http,
+        KFileGetDelayErrReporting(&self->dad));
     rc = KHttpFileTimedRead ( self, pos, buffer, bsize, num_read, & tm );
-    if ( rc != 0 && KNSManagerLogNcbiVdbNetError ( self -> kns ) ) {
+    if ( rc != 0 && KNSManagerLogNcbiVdbNetError ( self -> kns )
+        && !TlsErrorGetDelayReporting(self->dad.error))
+    {
         KEndPoint ep, local_ep;
         KClientHttpGetLocalEndpoint  ( self -> http, & local_ep );
         KClientHttpGetRemoteEndpoint ( self -> http, & ep );

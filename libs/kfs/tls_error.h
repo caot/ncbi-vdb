@@ -42,8 +42,8 @@ rc_t TlsErrorRelease(TlsError * self);
 rc_t TlsErrorSetDelayReporting(TlsError * self, bool delay);
 bool TlsErrorGetDelayReporting(TlsError * self);
 
-rc_t TlsErrorSet(TlsError * self, int ret, rc_t rd_rc);
-rc_t TlsErrorGet(TlsError * self, int * ret, rc_t * rd_rc);
+rc_t TlsErrorSet(TlsError * self, int ret, rc_t rd_rc, bool handshake);
+rc_t TlsErrorGet(TlsError * self, int * ret, rc_t * rd_rc, bool * handshake);
 
 rc_t TlsErrorCopy(const TlsError * from, TlsError * to);
 

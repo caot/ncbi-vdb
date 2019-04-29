@@ -94,8 +94,9 @@ KFS_EXTERN rc_t CC KDirectoryPosixStringToSystemString (
 
 
 KFS_EXTERN rc_t CC KFileDelayErrReporting(const struct KFile *self, bool delay);
+KFS_EXTERN bool CC KFileGetDelayErrReporting(const struct KFile *self);
 KFS_EXTERN rc_t CC KFileGetTlsErr(const struct KFile *self,
-    int * ret, rc_t * rd_rc);
+    int * ret, rc_t * rd_rc, bool * handshake);
 
 
 #ifdef __cplusplus

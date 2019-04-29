@@ -100,10 +100,11 @@ KNS_EXTERN rc_t CC KTLSStreamVerifyCACert ( const KTLSStream * self );
 KNS_EXTERN rc_t CC KTLSStreamGetStream ( const KTLSStream * self,
     struct KStream ** strm );
 
-/* LogReadErr
- * log mbedtls_ssl_read error
+
+/* LogErr
+ * log mbedtls_ssl error
  */
-KNS_EXTERN rc_t CC KTLSStreamLogReadErr(int ret, rc_t rc);
+KNS_EXTERN rc_t CC KTLSStreamLogErr(int ret, rc_t rc, bool handshake);
 
 
 #ifdef __cplusplus

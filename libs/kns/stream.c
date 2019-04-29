@@ -805,7 +805,9 @@ bool KStreamGetDelayErrReporting(const KStream *self) {
     return TlsErrorGetDelayReporting(self->error);
 }
 
-rc_t KStreamSetTlsErr(KStream * self, int ret, rc_t rd_rc) {
+static
+rc_t KStreamSetTlsErr(KStream * self, int ret, rc_t rd_rc, bool handshake)
+{
     if (self == NULL)
         return RC(rcNS, rcStream, rcUpdating, rcSelf, rcNull);
 
@@ -815,7 +817,15 @@ rc_t KStreamSetTlsErr(KStream * self, int ret, rc_t rd_rc) {
             return rc;
     }
 
-    return TlsErrorSet(self->error, ret, rd_rc);
+    return TlsErrorSet(self->error, ret, rd_rc, handshake);
+}
+
+rc_t KStreamSetTlsHandshakeErr(KStream * self, int ret, rc_t rd_rc) {
+    return KStreamSetTlsErr(self, ret, rd_rc, true);
+}
+
+rc_t KStreamSetTlsReadErr(KStream * self, int ret, rc_t rd_rc) {
+    return KStreamSetTlsErr(self, ret, rd_rc, false);
 }
 
 rc_t KStreamCopyTlsErr(struct KStream * self, TlsError * from) {

@@ -1173,11 +1173,23 @@ LIB_EXPORT rc_t CC KFileDelayErrReporting(const KFile_v1 *cself, bool delay) {
     return TlsErrorSetDelayReporting(self->error, delay);
 }
 
-LIB_EXPORT rc_t CC KFileGetTlsErr(const KFile *self, int * ret, rc_t * rd_rc) {
+LIB_EXPORT bool CC KFileGetDelayErrReporting(const KFile_v1 *self) {
     if (self == NULL)
         return RC(rcFS, rcFile, rcAccessing, rcSelf, rcNull);
 
-    return TlsErrorGet(self->error, ret, rd_rc);
+    if (self->error == NULL)
+        return false;
+    
+    return TlsErrorGetDelayReporting(self->error);
+}
+
+LIB_EXPORT rc_t CC KFileGetTlsErr(const KFile *self,
+    int * ret, rc_t * rd_rc, bool * handshake)
+{
+    if (self == NULL)
+        return RC(rcFS, rcFile, rcAccessing, rcSelf, rcNull);
+
+    return TlsErrorGet(self->error, ret, rd_rc, handshake);
 }
 
 rc_t KFileCopyTlsErr(KFile_v1 * self, const TlsError * from) {

@@ -44,6 +44,7 @@ typedef struct KClientHttpStream KClientHttpStream;
 #include <vfs/path.h>
 #include <kfs/file.h>
 #include <kfs/directory.h>
+#include "../kfs/tls_error.h" /* TlsErrorMake */
 
 #ifdef ERR
 #undef ERR
@@ -162,6 +163,7 @@ struct KClientHttp
 
     bool reliable;
     bool tls;
+    struct TlsError *error;
 
     bool close_connection;
 
@@ -491,6 +493,27 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
 }
 
 
+const struct TlsError * KClientHttpGetTlsError(const KClientHttp * self) {
+    if (self == NULL)
+        return NULL;
+    return self->error;
+}
+
+rc_t KClientHttpSetDelayReporting(KClientHttp * self, bool delay) {
+    rc_t rc = 0;
+
+    if (self != NULL) {
+        if (self->error == NULL)
+            rc = TlsErrorMake(&self->error);
+
+        if (rc == 0)
+            rc = TlsErrorSetDelayReporting(self->error, delay);
+    }
+
+    return rc;
+}
+
+
 static
 rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aPort )
 {
@@ -566,12 +589,21 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
         {
             KTLSStream * tls_stream;
 
+            KSocketSetDelayErrReporting(sock,
+                TlsErrorGetDelayReporting(self->error));
+
             STATUS ( STAT_PRG, "%s - creating TLS wrapper on socket\n", __func__ );
             rc = KNSManagerMakeTLSStream ( mgr, & tls_stream, sock, aHostname );
 
+            TlsErrorCopy(KSocketGetTlsErr(sock), self->error);
+
             if ( rc != 0 )
             {
+                assert(sock && self);
+
                 if ( ! proxy_ep ) {
+                  bool log = !TlsErrorGetDelayReporting(self->error);
+                  if (log) {
                     if ( KNSManagerLogNcbiVdbNetError ( mgr ) )
                         PLOGERR ( klogSys, ( klogSys, rc,
                             "Failed to create TLS stream for '$(host)' ($(ip)) "
@@ -584,6 +616,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
                             ( "Failed to create TLS stream for '%S' (%s) from '%s'\n",
                               aHostname, self -> ep . ip_address,
                               self -> local_ep . ip_address ) );
+                  }
                 }
                 else
                 {
@@ -2626,6 +2659,17 @@ LIB_EXPORT rc_t CC KClientHttpResultDelayErrReporting(KClientHttpResult * self,
 {
     if (self == NULL)
         return RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
+
+    if (self->http != NULL) {
+        if (self->http->error == NULL) {
+            rc_t rc = TlsErrorMake(&self->http->error);
+            if (rc != 0)
+                return rc;
+        }
+
+        assert(self->http->error);
+        TlsErrorSetDelayReporting(self->http->error, delay);
+    }
 
     return KStreamSetDelayErrReporting(self->http->sock, delay);
 }

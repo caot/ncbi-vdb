@@ -668,13 +668,27 @@ rc_t CC KTLSStreamWhack ( KTLSStream *self )
     return 0;
 }
 
-LIB_EXPORT rc_t CC KTLSStreamLogReadErr(int ret, rc_t rc) {
+static rc_t KTLSStreamLogHandshakeErr(int ret, rc_t rc) {
+    return PLOGERR(klogSys, (klogSys, rc
+        , "mbedtls_ssl_handshake returned $(ret) ( $(expl) )"
+        , "ret=%d,expl=%s"
+        , ret
+        , mbedtls_strerror2(ret)
+        ));
+}
+
+static rc_t KTLSStreamLogReadErr(int ret, rc_t rc) {
     return PLOGERR(klogSys, (klogSys, rc
         , "mbedtls_ssl_read returned $(ret) ( $(expl) )"
         , "ret=%d,expl=%s"
         , ret
         , mbedtls_strerror2(ret)
         ));
+}
+
+LIB_EXPORT rc_t CC KTLSStreamLogErr(int ret, rc_t rc, bool handshake) {
+    return handshake
+        ? KTLSStreamLogHandshakeErr(ret, rc) : KTLSStreamLogReadErr(ret, rc);
 }
 
 static
@@ -700,7 +714,7 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
         /* read through TLS library */
         ret = vdb_mbedtls_ssl_read( &self -> ssl, buffer, bsize );
 
-        KStreamSetTlsErr(&self->dad, ret, self->rd_rc);
+        KStreamSetTlsReadErr(&self->dad, ret, self->rd_rc);
 
         /* no error */
         if ( ret >= 0 )
@@ -1027,9 +1041,11 @@ rc_t ktls_ssl_setup ( KTLSStream *self, const String *host )
 }
 
 static 
-rc_t ktls_handshake ( KTLSStream *self )
+rc_t ktls_handshake ( KTLSStream *self, int * aRet)
 {
     int ret;
+
+    assert(aRet);
 
     STATUS ( STAT_QA, "Performing SSL/TLS handshake...\n" );
 
@@ -1056,12 +1072,11 @@ rc_t ktls_handshake ( KTLSStream *self )
                    or the error is something other than a validation error */
                 rc = RC ( rcKrypto, rcSocket, rcOpening, rcConnection, rcFailed );
 
-                PLOGERR ( klogSys, ( klogSys, rc
-                                     , "mbedtls_ssl_handshake returned $(ret) ( $(expl) )"
-                                     , "ret=%d,expl=%s"
-                                     , ret
-                                     , mbedtls_strerror2 ( ret )
-                              ) );
+                if (!KStreamGetDelayErrReporting(&self->dad) ||
+                    ret != MBEDTLS_ERR_NET_RECV_FAILED)
+                {
+                    KTLSStreamLogHandshakeErr(ret, rc);
+                }
 
                 if ( ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED )
                 {
@@ -1081,11 +1096,13 @@ rc_t ktls_handshake ( KTLSStream *self )
                 }
             }
 
+            *aRet = ret;
             return rc;
         }
         ret = vdb_mbedtls_ssl_handshake( &self -> ssl );
     }
 
+    *aRet = ret;
     return 0;
 }
 
@@ -1176,7 +1193,11 @@ LIB_EXPORT rc_t CC KNSManagerMakeTLSStream ( const KNSManager * self,
                 rc = ktls_ssl_setup ( ktls, host );
                 if ( rc == 0 )
                 {
-                    rc = ktls_handshake ( ktls );
+                    int ret = 0;
+                    KStreamSetDelayErrReporting(&ktls->dad,
+                        KSocketGetDelayErrReporting(ciphertext));
+                    rc = ktls_handshake ( ktls, &ret);
+                    KSocketSetTlsHandshakeErr(ciphertext, ret, rc);
                     if ( rc == 0 )
                     {
                         ktls -> mgr = self;
@@ -1184,7 +1205,16 @@ LIB_EXPORT rc_t CC KNSManagerMakeTLSStream ( const KNSManager * self,
                         return 0;
                     }
                     else {
-                        if ( KNSManagerLogNcbiVdbNetError ( self ) ) {
+                        bool log = KNSManagerLogNcbiVdbNetError(self);
+                        if (log) {
+                            if (KSocketGetDelayErrReporting(ciphertext)) {
+                                if (ret == MBEDTLS_ERR_NET_RECV_FAILED)
+                                    log = false;
+                                else
+                                    log = true;
+                            }
+                        }
+                        if (log ) {
                             KEndPoint ep, local_ep;
                             rc_t rr = KSocketGetRemoteEndpoint ( ciphertext,
                                                                  & ep );
