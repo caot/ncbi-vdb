@@ -599,7 +599,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
 
             if ( rc != 0 )
             {
-                assert(sock && self);
+                assert(self);
 
                 if ( ! proxy_ep ) {
                   bool log = !TlsErrorGetDelayReporting(self->error);
